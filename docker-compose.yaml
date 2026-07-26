@@ -1,0 +1,88 @@
+version: '3.7'
+services:
+  trino-coordinator:
+    image: 'trinodb/trino:latest'
+    container_name: trino-coordinator
+    hostname: trino-coordinator
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./etc:/etc/trino
+    networks:
+      - trino-network
+
+  mariadb:
+    image: 'mariadb:latest'
+    container_name: mariadb
+    hostname: mariadb
+    ports:
+      - '3306:3306'
+    volumes:
+      - maria_volume:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_DATABASE: metastore_db
+    networks:
+      - trino-network
+
+  hive-metastore:
+    image: 'starburstdata/hive:3.1.3-e.4'
+    hostname: hive-metastore
+    container_name: hive-metastore
+    ports:
+      - '9083:9083'
+    environment:
+      HIVE_METASTORE_DRIVER: org.mariadb.jdbc.Driver
+      HIVE_METASTORE_JDBC_URL: jdbc:mysql://mariadb:3306/metastore_db
+      HIVE_METASTORE_USER: admin
+      HIVE_METASTORE_PASSWORD: admin
+      HIVE_METASTORE_WAREHOUSE_DIR: s3://warehouse/
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_PATH_STYLE_ACCESS: "true"
+      REGION: us-east-1
+      GOOGLE_CLOUD_KEY_FILE_PATH: ""
+      AZURE_ADL_CLIENT_ID: ""
+      AZURE_ADL_CREDENTIAL: ""
+      AZURE_ADL_REFRESH_URL: ""
+      AZURE_ABFS_STORAGE_ACCOUNT: ""
+      AZURE_ABFS_ACCESS_KEY: ""
+      AZURE_WASB_STORAGE_ACCOUNT: ""
+      AZURE_ABFS_OAUTH: ""
+      AZURE_ABFS_OAUTH_TOKEN_PROVIDER: ""
+      AZURE_ABFS_OAUTH_CLIENT_ID: ""
+      AZURE_ABFS_OAUTH_SECRET: ""
+      AZURE_ABFS_OAUTH_ENDPOINT: ""
+      AZURE_WASB_ACCESS_KEY: ""
+    depends_on:
+      - mariadb
+    networks:
+      - trino-network
+
+  minio:
+    image: 'minio/minio:latest'
+    hostname: minio
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    command: server --console-address ":9001" /data
+    networks:
+      - trino-network
+
+volumes:
+  minio-data:
+    driver: local
+  maria_volume:
+
+networks:
+  trino-network:
+    driver: bridge
