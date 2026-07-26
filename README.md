@@ -1,6 +1,6 @@
 # Trino First Project
 
-Пет-проект для практического знакомства с [Trino](https://trino.io/) как query-движком поверх лейкхаус-архитектуры: Hive Metastore + MinIO (S3-совместимое хранилище) + MariaDB (backend для метастора), всё поднимается локально через Docker Compose.
+Пет-проект для практического знакомства с [Trino](https://trino.io/) как query-движком поверх лейкхаус-архитектуры: Hive Metastore + MinIO (S3-совместимое хранилище) + Postres (backend для метастора), всё поднимается локально через Docker Compose.
 
 ## Архитектура
 
@@ -19,14 +19,14 @@
               ┌──────────────┼──────────────┐
               │                             │
      ┌────────▼────────┐          ┌─────────▼────────┐
-     │     MariaDB      │          │       MinIO       │
+     │     Postres      │          │       MinIO       │
      │ (metastore_db)   │          │  (S3-хранилище)   │
      └──────────────────┘          └────────────────────┘
 ```
 
 - **Trino** — распределённый SQL-движок, единая точка входа для запросов.
 - **Hive Metastore** — хранит метаданные (схемы, таблицы, партиции) и отдаёт их Trino по Thrift-протоколу.
-- **MariaDB** — реляционное хранилище для самого метастора (таблицы `DBS`, `TBLS`, `SDS` и т.д.).
+- **Postres** — реляционное хранилище для самого метастора (таблицы `DBS`, `TBLS`, `SDS` и т.д.).
 - **MinIO** — S3-совместимое объектное хранилище, куда физически пишутся данные таблиц (Parquet).
 
 ## Стек
@@ -35,7 +35,7 @@
 |-----------------|--------------------------------|--------------|
 | Trino Coordinator | `trinodb/trino:latest`       | 8080         |
 | Hive Metastore  | `starburstdata/hive:3.1.3-e.4` | 9083         |
-| MariaDB         | `mariadb:latest`               | 3306         |
+| Postres         | `Postres:latest`               | 3306         |
 | MinIO           | `minio/minio:latest`           | 9000, 9001   |
 
 > **Почему `starburstdata/hive`, а не `bitsondatadev/hive-metastore`?**
@@ -54,7 +54,7 @@
 docker compose up -d
 ```
 
-Дай сервисам подняться (метастору может понадобиться до 30–60 секунд на первичную инициализацию схемы в MariaDB):
+Дай сервисам подняться (метастору может понадобиться до 30–60 секунд на первичную инициализацию схемы в Postres):
 
 ```bash
 docker compose logs -f hive-metastore
@@ -116,7 +116,7 @@ INSERT INTO test_table VALUES (1, 'hello'), (2, 'world');
 SELECT * FROM test_table;
 ```
 
-Если запрос отработал — вся цепочка Trino → Hive Metastore → MariaDB → MinIO рабочая.
+Если запрос отработал — вся цепочка Trino → Hive Metastore → Postres → MinIO рабочая.
 
 ## Структура репозитория
 
@@ -134,7 +134,7 @@ SELECT * FROM test_table;
 ## Полезные команды
 
 ```bash
-# Полная пересборка с нуля (удаляет все volumes — данные MariaDB и MinIO)
+# Полная пересборка с нуля (удаляет все volumes — данные Postres и MinIO)
 docker compose down -v
 docker compose up -d
 

@@ -23,11 +23,16 @@ CREATE TABLE minio.datalake.nyc_taxi (
     total_amount             DOUBLE,
     congestion_surcharge     DOUBLE,
     Airport_fee              DOUBLE,
-    cbd_congestion_fee       DOUBLE
+    cbd_congestion_fee       DOUBLE,
+    year                    VARCHAR,
+    month                   VARCHAR
 )
 WITH (
-    external_location = 's3a://datalake/nyc_taxi/2026/01',
-    format = 'PARQUET'
+    external_location = 's3://datalake/nyc_taxi/',
+    format = 'PARQUET',
+    partitioned_by = ARRAY['year', 'month']
 );
+
+CALL minio.system.sync_partition_metadata('datalake', 'nyc_taxi', 'FULL');
 
 SELECT * FROM minio.datalake.nyc_taxi;
